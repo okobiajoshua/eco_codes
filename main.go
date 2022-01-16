@@ -32,8 +32,8 @@ func main() {
 	r.HandleFunc("/", ch.Get).Methods(http.MethodGet)
 	r.HandleFunc("/{CODE}", ch.GetMoves).Methods(http.MethodGet)
 
-	// port := os.Getenv("PORT")
-	port := "8000"
+	port := os.Getenv("PORT")
+	// port := "8000"
 	addr := fmt.Sprintf("0.0.0.0:%s", port)
 
 	srv := &http.Server{
