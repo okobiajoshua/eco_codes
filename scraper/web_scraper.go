@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/net/html"
@@ -13,6 +15,7 @@ import (
 type Scraper interface {
 	GetAll() ([]Move, error)
 	GetByCode(code string) (Move, error)
+	GetNextMove(currentMove string) (string, error)
 }
 
 type Move struct {
@@ -49,6 +52,29 @@ func (ws *WebScraper) GetByCode(code string) (Move, error) {
 	return ws.cache[code], nil
 }
 
+func (ws *WebScraper) GetNextMove(currentMove string) (string, error) {
+	if len(ws.cache) <= 0 {
+		ws.crawl()
+	}
+	cms := strings.Split(currentMove, "/")
+	l := len(cms)
+
+	moves := ws.cache[cms[0]].Moves
+	movesArr := strings.Split(moves, " ")
+
+	idx := 0
+	for _, v := range movesArr {
+		if _, err := strconv.Atoi(v); err != nil {
+			idx++
+			if l == idx {
+				return v, nil
+			}
+		}
+	}
+
+	return "", nil
+}
+
 func (ws *WebScraper) crawl() error {
 	htmlStr, err := ws.getHTML([]byte(ws.ecoCodeDataURL))
 	if err != nil {
@@ -78,12 +104,8 @@ func (ws *WebScraper) getCodesFromHTMLString(body []byte) error {
 		return err
 	}
 
-	count := 0
 	var f func(*html.Node)
 	f = func(n *html.Node) {
-		if count >= 100 {
-			return
-		}
 		if n.Type == html.ElementNode && n.Data == "tr" {
 			k := n.FirstChild.FirstChild.FirstChild.Data
 			cv := n.FirstChild.NextSibling.FirstChild
@@ -92,7 +114,6 @@ func (ws *WebScraper) getCodesFromHTMLString(body []byte) error {
 			m := Move{k, author, code}
 			ws.cache[k] = m
 			ws.list = append(ws.list, m)
-			count++
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			f(c)

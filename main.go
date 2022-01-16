@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/eco_codes/handler"
@@ -20,20 +21,22 @@ func main() {
 	flag.DurationVar(&wait, "graceful-timeout", time.Second*15, "the duration for which the server gracefully wait for existing connections to finish - e.g. 15s or 1m")
 	flag.Parse()
 
-	// ecoCodeDataURL := os.Getenv("ECO_CODE_DATA_URL")
-	ecoCodeDataURL := "https://www.chessgames.com/chessecohelp.html"
+	ecoCodeDataURL := os.Getenv("ECO_CODE_DATA_URL")
+	if strings.Trim(ecoCodeDataURL, " ") == "" {
+		ecoCodeDataURL = "https://www.chessgames.com/chessecohelp.html"
+	}
+
 	ws := scraper.NewWebScraper(ecoCodeDataURL)
 
 	ch := handler.NewChessMoveHandler(ws)
 
 	r := mux.NewRouter()
-	// s := r.PathPrefix("/").Subrouter()
 
 	r.HandleFunc("/", ch.Get).Methods(http.MethodGet)
 	r.HandleFunc("/{CODE}", ch.GetMoves).Methods(http.MethodGet)
+	r.HandleFunc("/next/{MOVE:.*}", ch.GetNextMove).Methods(http.MethodGet) // Route for chess player next move
 
 	port := os.Getenv("PORT")
-	// port := "8000"
 	addr := fmt.Sprintf("0.0.0.0:%s", port)
 
 	srv := &http.Server{

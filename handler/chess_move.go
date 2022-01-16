@@ -22,6 +22,7 @@ func (h *ChessMoveHandler) Get(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error scraping site for data", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("content-type", "application/json")
 	json.NewEncoder(w).Encode(res)
 }
 
@@ -34,6 +35,23 @@ func (h *ChessMoveHandler) GetMoves(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := h.scraper.GetByCode(code)
+	if err != nil {
+		http.Error(w, "error scraping site for data", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	json.NewEncoder(w).Encode(res)
+}
+
+func (h *ChessMoveHandler) GetNextMove(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	code, ok := vars["MOVE"]
+	if !ok {
+		http.Error(w, "Current move is missing in path", http.StatusBadRequest)
+		return
+	}
+
+	res, err := h.scraper.GetNextMove(code)
 	if err != nil {
 		http.Error(w, "error scraping site for data", http.StatusInternalServerError)
 		return
